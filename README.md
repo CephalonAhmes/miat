@@ -10,16 +10,23 @@ All markers can be used in groups of 1, 2 or 3, which will have the same color. 
 An example would be something like this:
 
 import numpy as np
+
 import matplotlib.pyplot as plt
+
 from miat_pkg import miat
 
 fig=plt.figure()
 
 a=np.arange(20)
+
 b=np.arange(20)
+
 ax0 = fig.add_subplot(111)
+
 ax0.plot(a,b)
+
 ax0.set_ylabel('b')
+
 ax0.set_title('ab')
 
 
@@ -29,10 +36,15 @@ vertical_positions,horizontal_positions=miat.lines_buttons.main(fig,1)
 fig=plt.figure()
 
 a=np.arange(20)
+
 b=np.arange(20)
+
 ax0 = fig.add_subplot(111)
+
 ax0.plot(a,b)
+
 ax0.set_ylabel('b')
+
 ax0.set_title('ab')
 
 
