@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: miat
+Version: 0.0.3
+Summary: Basic python manual image analysis tool using matplotlib
+Home-page: https://github.com/CephalonAhmes/miat
+Author: Philippe Desmarais
+Author-email: philippe.desmarais0trash@gmail.com
+License: MIT
+Description: placeholder description
+Platform: UNKNOWN
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
