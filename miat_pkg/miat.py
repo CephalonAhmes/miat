@@ -7,6 +7,13 @@ from pathlib import Path
 #%%
 color_list=["r","c","orange","g","purple","saddlebrown","deeppink","lime","gray"]
 
+def _set_button_active(button,active):
+	button.ax.images[0].set_visible(active)
+	button.ax.patch.set_visible(active)
+	button.label.set_visible(False)
+	button.ax.axis({True:'on',False:'off'}[active])
+	button.set_active(active)
+
 class draggable_lines:
 	def __init__(self,axes,position,color,orientation,linestyle):
 		self.orientation=orientation
@@ -18,6 +25,7 @@ class draggable_lines:
 		self.sid = self.canvas.mpl_connect('pick_event', self.clickonline)
 		self.canvas.draw_idle()
 
+
 	def clickonline(self, event):
 		if event.artist in self.lines:
 			self.follower = self.canvas.mpl_connect("motion_notify_event", self.followmouse)
@@ -28,7 +36,8 @@ class draggable_lines:
 			[line.set_ydata([event.ydata, event.ydata]) for line in self.lines]
 		if self.orientation==0:
 			[line.set_xdata([event.xdata, event.xdata]) for line in self.lines]
-		self.canvas.draw_idle()
+		self.canvas.draw()
+
 
 	def releaseonclick(self, event):
 		self.position = {0:self.lines[0].get_xdata()[0],1:self.lines[0].get_ydata()[0]}[self.orientation]
@@ -52,9 +61,10 @@ class draggable_circles:
 		self.ax.add_artist(self.circle)
 		self.sid = self.canvas.mpl_connect('pick_event', self.clickonline)
 		self.sid_position_finder= self.canvas.mpl_connect('button_press_event',self.click_position_finder)
-		self.canvas.draw_idle()
 		self.closed=False
 		self.drag=False
+		self.canvas.draw_idle()
+
 	
 	def circle_picker(self,circle,mouseevent):
 		if mouseevent.xdata is None:
@@ -97,7 +107,8 @@ class draggable_circles:
 			self.circle.set_radius(newradius)
 		if self.drag:
 			self.circle.set_center(newcenter)
-		self.canvas.draw_idle()
+		self.canvas.draw()
+
 
 	def releaseonclick(self, event):
 		if event.button==1:
@@ -151,7 +162,7 @@ class circles_buttons:
 		for i in range(self.marker_group_size):
 			while True:
 				random_radii=np.random.choice(possible_radii)
-				if (random_radii not in selected_radii) and (abs((random_radii-current_radii)/(possible_radii[0]-possible_radii[-1]))>0.01).all():
+				if (random_radii not in selected_radii) and (abs((random_radii-current_radii)/(possible_radii[0]-possible_radii[-1]))>0.05).all():
 					selected_radii.append(random_radii)
 					break
 		self.markers.append([draggable_circles(self.ax,center,selected_radii[marker],selected_color,self.linestyle) for marker in range(self.marker_group_size)])
@@ -164,21 +175,20 @@ class circles_buttons:
 		
 	def check_marker_count(self):
 		if len(self.markers)==len(color_list):
-			self.buttons[0]=False
+			_set_button_active(self.buttons[0],False)
 		elif len(self.markers)<len(color_list) and len(self.markers)>0:
-			if self.buttons[0]==False:
-				self.buttons[0]=self.activate_button(*self.buttons_data[0])
-			if self.buttons[1]==False:
-				self.buttons[1]=self.activate_button(*self.buttons_data[1])
+			if not self.buttons[0].get_active():
+				_set_button_active(self.buttons[0],True)
+			if not self.buttons[1].get_active():
+				_set_button_active(self.buttons[1],True)
 		elif len(self.markers)==0:
-			self.buttons[1]=False
+			_set_button_active(self.buttons[1],False)
 		self.canvas.draw_idle()
 		
 	def returnpositions(self):
 		if self.clear:
 			unsorted=[[marker.clear() for marker in markergroup] for markergroup in self.markers]
-			button_axes=self.canvas.figure.get_axes()[-2:]
-			[button_axes[i].axis('off') for i in range(2)]
+			[_set_button_active(button,False) for button in self.buttons]
 			self.canvas.draw_idle()
 		if not self.clear:
 			unsorted=[[marker.radius for marker in markergroup] for markergroup in self.markers]
@@ -233,7 +243,7 @@ class circles_buttons:
 		plt.show()
 		
 		while circles_buttons_obj.closed==False:
-			plt.pause(5)
+			plt.pause(1)
 		
 		
 		return circles_buttons_obj.returnpositions()
@@ -302,21 +312,21 @@ class lines_buttons:
 		
 	def check_marker_count(self,orientation):
 		if len(self.markers[orientation])==len(color_list):
-			self.buttons[orientation][0]=False
+			_set_button_active(self.buttons[orientation][0],False)
 		elif len(self.markers[orientation])<len(color_list) and len(self.markers[orientation])>0:
-			if self.buttons[orientation][0]==False:
-				self.buttons[orientation][0]=self.activate_button(*self.buttons_data[orientation][0])
-			if self.buttons[orientation][1]==False:
-					self.buttons[orientation][1]=self.activate_button(*self.buttons_data[orientation][1])
+			if not self.buttons[orientation][0].get_active():
+				_set_button_active(self.buttons[orientation][0],True)
+			if not self.buttons[orientation][1].get_active():
+					_set_button_active(self.buttons[orientation][1],True)
 		elif len(self.markers[orientation])==0:
-			self.buttons[orientation][1]=False
+			_set_button_active(self.buttons[orientation][1],False)
 		self.canvas.draw_idle()
+
 		
 	def returnpositions(self):
 		if self.clear:
 			unsorted=[[[marker.clear() for marker in markergroup] for markergroup in self.markers[orientation]] for orientation in range(len(self.markers))]
-			button_axes=self.canvas.figure.get_axes()[-4:]
-			[button_axes[i].axis('off') for i in range(4)]
+			[[_set_button_active(button,False) for button in buttons] for buttons in self.buttons]
 			self.canvas.draw_idle()
 		if not self.clear:
 			unsorted=[[[marker.position for marker in markergroup] for markergroup in self.markers[orientation]] for orientation in range(len(self.markers))]
@@ -373,8 +383,8 @@ class lines_buttons:
 		plt.get_current_fig_manager().window.showMaximized()
 		plt.show()
 		
-		while lines_buttons_obj.closed==False:
-			plt.pause(5)
+		while not lines_buttons_obj.closed:
+			plt.pause(1)
 		
 		
 		return lines_buttons_obj.returnpositions()
@@ -406,3 +416,16 @@ if __name__=='__main__':
 	ax1.set_ylabel('b')
 	
 	pos=lines_buttons.main(fig,2)
+
+	fig=plt.figure()
+	
+	a=np.arange(20)
+	b=np.arange(20)
+	ax0 = fig.add_subplot(111)
+	ax0.plot(a,b)
+	ax0.set_ylabel('b')
+	ax0.set_title('ab')
+	
+	ax0.set_xlabel('a')
+	
+	rad=circles_buttons.main(ax0,1,clear=True)
