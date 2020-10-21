@@ -11,6 +11,7 @@ An example would be something like this:
 
 
 """
+
 	import numpy as np
 	import matplotlib.pyplot as plt
 	from miat_pkg import miat
