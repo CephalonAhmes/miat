@@ -10,7 +10,6 @@ All markers can be used in groups of 1, 2 or 3, which will have the same color. 
 An example would be something like this:
 
 
-"""
 
 	import numpy as np
 	import matplotlib.pyplot as plt
@@ -40,4 +39,3 @@ An example would be something like this:
 
 
 	radii=miat.circles_buttons.main(ax0,1)
-"""
