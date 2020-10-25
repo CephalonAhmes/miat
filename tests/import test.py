@@ -6,7 +6,7 @@ Created on Mon Oct 12 23:40:57 2020
 """
 import numpy as np
 import matplotlib.pyplot as plt
-from miat_pkg import miat
+import miat.tools as miat
 
 fig=plt.figure()
 
@@ -18,4 +18,4 @@ ax0.set_ylabel('b')
 ax0.set_title('ab')
 
 
-radii=miat.lines_buttons.main(fig,1)
+radii=miat.lines_tool.main(fig,1)
