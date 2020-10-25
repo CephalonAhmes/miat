@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="miat",
-    version="0.0.4",
+    version="0.0.6",
     author="Philippe Desmarais",
     author_email="philippe.desmarais0trash@gmail.com",
     description="Basic python manual image analysis tool using matplotlib",
