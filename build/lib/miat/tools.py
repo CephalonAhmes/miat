@@ -66,10 +66,17 @@ class _draggable_circles:
 		self.position=position
 		self.radius=radius
 		self.circle=Circle(position,radius,picker=self.circle_picker,color=color,linestyle=linestyle,fill=False)
-		self.center_dot=Circle(position,0.05,color=color)
+		
+		delta=min([self.ax.get_xlim()[1]-self.ax.get_xlim()[0],self.ax.get_ylim()[1]-self.ax.get_ylim()[0]])
+
+		
+		self.center_dot=Circle(position,delta/200,color=color)
 		self.circle_artist=self.ax.add_artist(self.circle)
 		self.center_dot_artist=self.ax.add_artist(self.center_dot)
 		self.center_dot_artist.set_visible(False)
+		
+
+		
 		self.sid = self.canvas.mpl_connect('pick_event', self.clickonline)
 		self.sid_position_finder= self.canvas.mpl_connect('button_press_event',self.click_position_finder)
 		self.closed=False
@@ -182,9 +189,10 @@ class circles_tool:
 	
 	def add_f(self,event):
 		current_radii=np.array([[marker.radius for marker in markergroup] for markergroup in self.markers]).flatten()
-		limits_array=np.linspace(*self.ax.get_xlim(),100)
-		center=(limits_array[50],limits_array[50])
-		possible_radii=limits_array[55:]-center[0]
+		xlimits_array=np.linspace(*self.ax.get_xlim(),100)
+		ylimits_array=np.linspace(*self.ax.get_ylim(),100)
+		center=(xlimits_array[50],ylimits_array[50])
+		possible_radii=xlimits_array[55:]-center[0]
 		selected_color=color_list[len(self.markers)]
 		selected_radii=[]
 		for i in range(self.marker_group_size):
