@@ -17,13 +17,13 @@ The circle tool allows you to measure radii on a figure. Let's start with an exa
 
 Notice how the main function takes an ax object, not a figure object.
 
-You'll get something like this: ![](https://github.com/CephalonAhmes/miat/blob/main/documentation/Circles/Figure_2.png?raw=true)
+You'll get something like this: ![](https://github.com/CephalonAhmes/miat/blob/main/documentation/Circles/Figure_1.png?raw=true)
 
-Notice the green buttons in the bottom-left corner? They are used to add/remove circle markers (to remove, use the red buttons). After you use them, click on a circle and move the mouse to resize. If you right-click after having selected a circle, you can move it around. Click again to lock it in place.
+There are now new tools in the toolbar, which are used to add/remove circle markers (to remove, use the red buttons). After you use them, click on a circle and move the mouse to resize. If you right-click after having selected a circle, you can move it around. Click again to lock it in place.
 
 
 
-Adjust as you want, an end results looks like this: ![](https://github.com/CephalonAhmes/miat/blob/main/documentation/Circles/Figure_1.png?raw=true)
+Adjust as you want, an end results looks like this: ![](https://github.com/CephalonAhmes/miat/blob/main/documentation/Circles/Figure_2.png?raw=true)
 
 To get a delta, do:
 	

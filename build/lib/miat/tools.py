@@ -2,8 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as Lines
 from matplotlib.patches import Circle
-from matplotlib.widgets import Button
 from pathlib import Path
+plt.rcParams['toolbar'] = 'toolmanager'
+from matplotlib.backend_tools import ToolBase
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 #%%
 color_list=["r","c","orange","g","purple","saddlebrown","deeppink","lime","gray"]
 
@@ -79,7 +83,6 @@ class _draggable_circles:
 		
 		self.sid = self.canvas.mpl_connect('pick_event', self.clickonline)
 		self.sid_position_finder= self.canvas.mpl_connect('button_press_event',self.click_position_finder)
-		self.closed=False
 		self.drag=False
 		self.canvas.draw_idle()
 
@@ -158,6 +161,23 @@ class _draggable_circles:
 		self.canvas.draw()
 		return self.radius
 
+class toolbarbutton(ToolBase):
+	def __init__(self,*args,**kwargs):
+		self.image=kwargs.pop('image')
+		self.func=kwargs.pop('func')
+		self.description=kwargs.pop('description')
+		ToolBase.__init__(self, *args, **kwargs)
+		self.toggle(True)
+
+	def toggle(self,active):
+		self._active=active
+		
+	def trigger(self, *args, **kwargs):
+		if self._active:
+			self.func()
+
+
+
 
 class circles_tool:
 	def __init__(self,ax,marker_group_size,linestyle,clear):
@@ -165,29 +185,32 @@ class circles_tool:
 		self.canvas=ax.figure.canvas
 		self.markers=[]
 		self.linestyle=linestyle
-		self.closed=False
 		self.clear=clear
 		self.ax=ax
+		self.tm = self.canvas.manager.toolmanager
+		self.tb=self.canvas.manager.toolbar
+
+
+		self.add_tool=self.tm.add_tool('add',
+					toolbarbutton,
+					image=str(Path(__file__).parent / "icons/" / 'add_{}_circles_icon.png'.format(marker_group_size)),
+					func=self.add_f,
+					description='Add circles',
+					)
 		
+		self.remove_tool=self.tm.add_tool('remove',
+					toolbarbutton,
+					image=str(Path(__file__).parent / "icons/" / 'remove_{}_circles_icon.png'.format(marker_group_size)),
+					func=self.delete_f,
+					description='Remove circles',
+					)
 		
-		ypos,height,width= 0.0, 0.07, 0.07
-		add_data=(plt.axes([0.0,ypos,height,width]), 'add_{}_circles_icon.png'.format(marker_group_size),self.add_f)
-		del_data=(plt.axes([0.05,ypos,height,width]), 'remove_{}_circles_icon.png'.format(marker_group_size),self.delete_f)
-		self.buttons_data=[add_data,del_data]
-		
-		add_button=self.activate_button(*self.buttons_data[0])
-		del_button=self.activate_button(*self.buttons_data[1])
-		self.buttons=[add_button,del_button]
+		self.tb.add_tool(self.add_tool, "foo",0)
+		self.tb.add_tool(self.remove_tool, "foo",1)
 		
 		self.check_marker_count()
 		
-	def activate_button(self,loc,impath:str,func):
-		path = Path(__file__).parent / "icons/" / impath
-		temp_button_ref=Button(loc,'',image=plt.imread(path))
-		temp_button_ref.on_clicked(lambda event: func(event))
-		return temp_button_ref
-	
-	def add_f(self,event):
+	def add_f(self):
 		current_radii=np.array([[marker.radius for marker in markergroup] for markergroup in self.markers]).flatten()
 		xlimits_array=np.linspace(*self.ax.get_xlim(),100)
 		ylimits_array=np.linspace(*self.ax.get_ylim(),100)
@@ -204,27 +227,23 @@ class circles_tool:
 		self.markers.append([_draggable_circles(self.ax,center,selected_radii[marker],selected_color,self.linestyle) for marker in range(self.marker_group_size)])
 		self.check_marker_count()
 		
-	def delete_f(self,event):
+	def delete_f(self):
 		[marker.clear() for marker in self.markers[-1]]
 		del self.markers[-1:]
 		self.check_marker_count()
 		
 	def check_marker_count(self):
 		if len(self.markers)==len(color_list):
-			_set_button_active(self.buttons[0],False)
+			self.add_tool.toggle(False)
 		elif len(self.markers)<len(color_list) and len(self.markers)>0:
-			if not self.buttons[0].get_active():
-				_set_button_active(self.buttons[0],True)
-			if not self.buttons[1].get_active():
-				_set_button_active(self.buttons[1],True)
+			self.add_tool.toggle(True)
+			self.remove_tool.toggle(True)
 		elif len(self.markers)==0:
-			_set_button_active(self.buttons[1],False)
-		self.canvas.draw_idle()
+			self.remove_tool.toggle(False)
 		
 	def returnpositions(self):
 		if self.clear:
 			unsorted=[[marker.clear() for marker in markergroup] for markergroup in self.markers]
-			[_set_button_active(button,False) for button in self.buttons]
 			self.canvas.draw_idle()
 		if not self.clear:
 			unsorted=[[marker.radius for marker in markergroup] for markergroup in self.markers]
@@ -233,7 +252,7 @@ class circles_tool:
 		return unsorted
 	
 	def handle_close(self,event):
-		self.closed=True
+		self.canvas.stop_event_loop()
 		
 	def main(ax,markergroupsize:int=1,linestyle='solid',clear=True):
 		"""
@@ -278,8 +297,7 @@ class circles_tool:
 
 		ax.figure.canvas.mpl_connect('close_event', circles_tool_obj.handle_close)
 		
-		while circles_tool_obj.closed==False:
-			ax.figure.canvas.start_event_loop(0.1)
+		ax.figure.canvas.start_event_loop()
 		
 		return circles_tool_obj.returnpositions()
 
@@ -292,39 +310,56 @@ class lines_tool:
 		self.canvas=canvas
 		self.markers=[[],[]]
 		self.linestyle=linestyle
-		self.closed=False
 		self.clear=clear
 		
 		if axes==None:
 			self.axes=self.canvas.figure.get_axes()
 		else:
 			self.axes=axes
-
 		
+		self.tm = self.canvas.manager.toolmanager
+		self.tb=self.canvas.manager.toolbar
 		markerindex_dic={'v':0,'h':1}
-		ypos,height,width= 0.0, 0.07, 0.07
-		add_v_data=(plt.axes([0.0,ypos,height,width]), 'add_{}_vbar_icon.png'.format(marker_group_size),self.add_f,markerindex_dic['v'])
-		del_v_data=(plt.axes([0.05,ypos,height,width]), 'remove_{}_vbar_icon.png'.format(marker_group_size),self.delete_f,markerindex_dic['v'])
-		add_h_data=(plt.axes([0.1,ypos,height,width]), 'add_{}_hbar_icon.png'.format(marker_group_size),self.add_f,markerindex_dic["h"])
-		del_h_data=(plt.axes([0.15,ypos,height,width]), 'remove_{}_hbar_icon.png'.format(marker_group_size),self.delete_f,markerindex_dic['h'])
-		self.buttons_data=[[add_v_data,del_v_data],[add_h_data,del_h_data]]
+
+
+		self.add_v_tool=self.tm.add_tool('add_v',
+					toolbarbutton,
+					image=str(Path(__file__).parent / "icons/" / 'add_{}_vbar_icon.png'.format(marker_group_size)),
+					func=(lambda: self.add_f(markerindex_dic['v'])),
+					description='Add vertical lines',
+					)
 		
-		add_v_button=self.activate_button(*self.buttons_data[0][0])
-		del_v_button=self.activate_button(*self.buttons_data[0][1])
-		add_h_button=self.activate_button(*self.buttons_data[1][0])
-		del_h_button=self.activate_button(*self.buttons_data[1][1])
-		self.buttons=[[add_v_button,del_v_button],[add_h_button,del_h_button]]
+		self.remove_v_tool=self.tm.add_tool('remove_v',
+					toolbarbutton,
+					image=str(Path(__file__).parent / "icons/" / 'remove_{}_vbar_icon.png'.format(marker_group_size)),
+					func=(lambda: self.delete_f(markerindex_dic['v'])),
+					description='Remove vertical lines',
+					)
+		self.add_h_tool=self.tm.add_tool('add_h',
+					toolbarbutton,
+					image=str(Path(__file__).parent / "icons/" / 'add_{}_hbar_icon.png'.format(marker_group_size)),
+					func=(lambda: self.add_f(markerindex_dic['h'])),
+					description='Add horizontal lines',
+					)
+		
+		self.remove_h_tool=self.tm.add_tool('remove_h',
+					toolbarbutton,
+					image=str(Path(__file__).parent / "icons/" / 'remove_{}_hbar_icon.png'.format(marker_group_size)),
+					func=(lambda: self.delete_f(markerindex_dic['h'])),
+					description='Remove horizontal lines',
+					)
+		
+		self.tb.add_tool(self.add_v_tool, "foo",0)
+		self.tb.add_tool(self.remove_v_tool, "foo",1)
+		self.tb.add_tool(self.add_h_tool, "foo",2)
+		self.tb.add_tool(self.remove_h_tool, "foo",3)
+		
+		self.buttons=[[self.add_v_tool,self.remove_v_tool],[self.add_h_tool,self.remove_h_tool]]
 		
 		self.check_marker_count(markerindex_dic['v'])
 		self.check_marker_count(markerindex_dic['h'])
 		
-	def activate_button(self,loc,impath:str,func,orientation):
-		path = Path(__file__).parent / "icons/" / impath
-		temp_button_ref=Button(loc,'',image=plt.imread(path))
-		temp_button_ref.on_clicked(lambda event: func(event,orientation))
-		return temp_button_ref
-	
-	def add_f(self,event,orientation):
+	def add_f(self,orientation):
 		current_positions=np.array([[marker.position for marker in markergroup] for markergroup in self.markers[orientation]]).flatten()
 		possible_positions_x=np.linspace(*self.canvas.figure.get_axes()[0].get_xlim(),100)[10:-10]
 		possible_positions_y=np.linspace(*self.canvas.figure.get_axes()[0].get_ylim(),100)[10:-10]
@@ -334,34 +369,31 @@ class lines_tool:
 		for i in range(self.marker_group_size):
 			while True:
 				random_position=np.random.choice(possible_positions)
-				if (random_position not in selected_positions) and (abs((random_position-current_positions)/(possible_positions[0]-possible_positions[-1]))>0.01).all():
+				if (random_position not in selected_positions) and (abs((random_position-current_positions)/(possible_positions[0]-possible_positions[-1]))>0.05).all():
 					selected_positions.append(random_position)
 					break
 		self.markers[orientation].append([_draggable_lines(self.axes,selected_positions[marker],selected_color,orientation,self.linestyle) for marker in range(self.marker_group_size)])
 		self.check_marker_count(orientation)
 		
-	def delete_f(self,event,orientation):
+	def delete_f(self,orientation):
 		[marker.clear() for marker in self.markers[orientation][-1]]
 		del self.markers[orientation][-1:]
 		self.check_marker_count(orientation)
 		
 	def check_marker_count(self,orientation):
 		if len(self.markers[orientation])==len(color_list):
-			_set_button_active(self.buttons[orientation][0],False)
+			self.buttons[orientation][0].toggle(False)
 		elif len(self.markers[orientation])<len(color_list) and len(self.markers[orientation])>0:
-			if not self.buttons[orientation][0].get_active():
-				_set_button_active(self.buttons[orientation][0],True)
-			if not self.buttons[orientation][1].get_active():
-					_set_button_active(self.buttons[orientation][1],True)
+			self.buttons[orientation][0].toggle(True)
+			self.buttons[orientation][1].toggle(True)
 		elif len(self.markers[orientation])==0:
-			_set_button_active(self.buttons[orientation][1],False)
+			self.buttons[orientation][1].toggle(False)
 		self.canvas.draw_idle()
 
 		
 	def returnpositions(self):
 		if self.clear:
 			unsorted=[[[marker.clear() for marker in markergroup] for markergroup in self.markers[orientation]] for orientation in range(len(self.markers))]
-			[[_set_button_active(button,False) for button in buttons] for buttons in self.buttons]
 			self.canvas.draw_idle()
 		if not self.clear:
 			unsorted=[[[marker.position for marker in markergroup] for markergroup in self.markers[orientation]] for orientation in range(len(self.markers))]
@@ -371,7 +403,7 @@ class lines_tool:
 		return unsorted
 	
 	def handle_close(self,event):
-		self.closed=True
+		self.canvas.stop_event_loop()
 		
 	def main(figure,markergroupsize:int=1,linestyle='solid',axes=None,clear=True):
 		"""
@@ -418,8 +450,7 @@ class lines_tool:
 		plt.get_current_fig_manager().window.showMaximized()
 		plt.show()
 		
-		while not lines_tool_obj.closed:
-			figure.canvas.start_event_loop(0.1)
+		figure.canvas.start_event_loop()
 		
 		
 		return lines_tool_obj.returnpositions()
@@ -463,4 +494,3 @@ if __name__=='__main__':
 	ax0.set_xlabel('a')
 	
 	rad=circles_tool.main(ax0,1,clear=True)
-
