@@ -25,6 +25,8 @@ There are now new tools in the toolbar, which are used to add/remove circle mark
 
 Adjust as you want, an end results looks like this: ![](https://github.com/CephalonAhmes/miat/blob/main/documentation/Circles/Figure_2.png?raw=true)
 
+Close the figure to return to your code and get the results as shown below.
+
 To get a delta, do:
 	
 	radii[0][1]-radii[0][0].

@@ -29,7 +29,8 @@ Use the green buttons to add vertical/horizontal lines, and the red ones, to del
 To measure the sine amplitude and period, I'd do something like this:
 ![](https://github.com/CephalonAhmes/miat/blob/main/documentation/Lines/Figure_2.png?raw=true)
 
-and 
+
+Close the figure to return to your code. To get the results, do something like this: 
 
 	amplitude=vlines[0][1]-vlines[0][0]
 	period=hlines[0][1]-hlines[0][0]
