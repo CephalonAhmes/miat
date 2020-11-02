@@ -24,7 +24,7 @@ Here, the lines_tool.main takes a figure object. If you want to specify which ax
 If you run this, you will see this:
 ![](https://github.com/CephalonAhmes/miat/blob/V0.0.8/documentation/Lines/Figure_1.png?raw=true)
 
-Use the green buttons to add vertical/horizontal lines, and the red ones, which you don't see yet, to delete them. CLick on a line to move it and click again to lock it in place.
+Use the green buttons to add vertical/horizontal lines, and the red ones, which you don't see yet, to delete them. Click on a line to move it and click again to lock it in place.
 
 To measure the sine amplitude and period, I'd do something like this:
 ![](https://github.com/CephalonAhmes/miat/blob/V0.0.8/documentation/Lines/Figure_2.png?raw=true)
