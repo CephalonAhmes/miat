@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: miat
-Version: 0.0.9
+Version: 0.0.10
 Summary: Basic python manual image analysis tool using matplotlib
 Home-page: https://github.com/CephalonAhmes/miat
 Author: Philippe Desmarais
