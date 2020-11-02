@@ -28,22 +28,23 @@ class _draggable_lines:
 
 	def clickonline(self, event):
 		if event.artist in self.lines:
-			[line_artist.remove() for line_artist in self.line_artists]
+			[line_artist.set_visible(False) for line_artist in self.line_artists]
 			self.canvas.draw()
 			self.backgrounds=[self.canvas.copy_from_bbox(ax.bbox) for ax in self.axes]
-			self.line_artists=[self.axes[i].add_line(self.lines[i]) for i in range(len(self.axes))]
+			[line_artist.set_visible(True) for line_artist in self.line_artists]
 			self.canvas.draw()
 			self.follower = self.canvas.mpl_connect("motion_notify_event", self.followmouse)
 			self.releaser = self.canvas.mpl_connect("button_press_event", self.releaseonclick)
 
 	def followmouse(self, event):
-		[self.canvas.restore_region(background) for background in self.backgrounds]
-		if self.orientation==1:
-			[line.set_ydata([event.ydata, event.ydata]) for line in self.lines]
-		if self.orientation==0:
-			[line.set_xdata([event.xdata, event.xdata]) for line in self.lines]
-		[self.axes[i].draw_artist(self.lines[i]) for i in range(len(self.axes))]
-		[self.canvas.blit(ax.bbox) for ax in self.axes]
+		if event.xdata and event.ydata:
+			[self.canvas.restore_region(background) for background in self.backgrounds]
+			if self.orientation==1:
+				[line.set_ydata([event.ydata, event.ydata]) for line in self.lines]
+			if self.orientation==0:
+				[line.set_xdata([event.xdata, event.xdata]) for line in self.lines]
+			[self.axes[i].draw_artist(self.lines[i]) for i in range(len(self.axes))]
+			[self.canvas.blit(ax.bbox) for ax in self.axes]
 
 	def releaseonclick(self, event):
 		[self.canvas.blit(ax.bbox) for ax in self.axes]
@@ -65,7 +66,17 @@ class _draggable_circles:
 		self.position=position
 		self.radius=radius
 		self.circle=Circle(position,radius,picker=self.circle_picker,color=color,linestyle=linestyle,fill=False)
+		
+		delta=min([self.ax.get_xlim()[1]-self.ax.get_xlim()[0],self.ax.get_ylim()[1]-self.ax.get_ylim()[0]])
+
+		
+		self.center_dot=Circle(position,delta/200,color=color)
 		self.circle_artist=self.ax.add_artist(self.circle)
+		self.center_dot_artist=self.ax.add_artist(self.center_dot)
+		self.center_dot_artist.set_visible(False)
+		
+
+		
 		self.sid = self.canvas.mpl_connect('pick_event', self.clickonline)
 		self.sid_position_finder= self.canvas.mpl_connect('button_press_event',self.click_position_finder)
 		self.closed=False
@@ -99,13 +110,17 @@ class _draggable_circles:
 			self.radius = self.circle.get_radius()
 			self.position=self.circle.get_center()
 			self.drag=not self.drag
+			self.center_dot_artist.set_visible(self.drag)
+			self.canvas.draw()
 
 	def clickonline(self, event):
 		if event.artist==self.circle:
-			self.circle_artist.remove()
+			self.center_dot_artist.set_visible(False)
+			self.circle_artist.set_visible(False)
 			self.canvas.draw()
 			self.background=self.canvas.copy_from_bbox(self.ax.bbox)
-			self.circle_artist=self.ax.add_artist(self.circle)
+			self.circle_artist.set_visible(True)
+			self.center_dot_artist.set_visible(self.drag)
 			self.canvas.draw()
 			self.follower = self.canvas.mpl_connect("motion_notify_event", self.followmouse)
 			self.releaser = self.canvas.mpl_connect("button_press_event", self.releaseonclick)
@@ -113,24 +128,29 @@ class _draggable_circles:
 
 			
 	def followmouse(self, event):
-		self.canvas.restore_region(self.background)
-		newradius=((self.position[0]-event.xdata)**2+(self.position[1]-event.ydata)**2)**0.5
-		centervector=(self.position[0]-self.clickevent_position[0],self.position[1]-self.clickevent_position[1])
-		newcenter=(centervector[0]+event.xdata,centervector[1]+event.ydata)
-		if not self.drag:
-			self.circle.set_radius(newradius)
-		if self.drag:
-			self.circle.set_center(newcenter)
-		self.ax.draw_artist(self.circle_artist)
-		self.canvas.blit(self.ax.bbox)
+		if event.xdata and event.ydata:
+			self.canvas.restore_region(self.background)
+			newradius=((self.position[0]-event.xdata)**2+(self.position[1]-event.ydata)**2)**0.5
+			centervector=(self.position[0]-self.clickevent_position[0],self.position[1]-self.clickevent_position[1])
+			newcenter=(centervector[0]+event.xdata,centervector[1]+event.ydata)
+			if not self.drag:
+				self.circle.set_radius(newradius)
+			if self.drag:
+				self.center_dot.set_center(newcenter)
+				self.circle.set_center(newcenter)
+			self.ax.draw_artist(self.circle_artist)
+			self.ax.draw_artist(self.center_dot_artist)
+			self.canvas.blit(self.ax.bbox)
 
 	def releaseonclick(self, event):
 		if event.button==1:
 			self.radius = self.circle.get_radius()
 			self.position=self.circle.get_center()
+			self.center_dot_artist.set_visible(False)
 			self.canvas.mpl_disconnect(self.releaser)
 			self.canvas.mpl_disconnect(self.follower)
 			self.canvas.mpl_disconnect(self.toggler)
+			self.canvas.draw_idle()
 
 
 	def clear(self):
@@ -169,9 +189,10 @@ class circles_tool:
 	
 	def add_f(self,event):
 		current_radii=np.array([[marker.radius for marker in markergroup] for markergroup in self.markers]).flatten()
-		limits_array=np.linspace(*self.ax.get_xlim(),100)
-		center=(limits_array[50],limits_array[50])
-		possible_radii=limits_array[55:]-center[0]
+		xlimits_array=np.linspace(*self.ax.get_xlim(),100)
+		ylimits_array=np.linspace(*self.ax.get_ylim(),100)
+		center=(xlimits_array[50],ylimits_array[50])
+		possible_radii=xlimits_array[55:]-center[0]
 		selected_color=color_list[len(self.markers)]
 		selected_radii=[]
 		for i in range(self.marker_group_size):
