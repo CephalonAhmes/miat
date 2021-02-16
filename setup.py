@@ -1,8 +1,9 @@
-import setuptools
+import setuptools, versioneer
 
 setuptools.setup(
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     name="miat",
-    version="0.0.10",
     author="Philippe Desmarais",
     author_email="philippe.desmarais0trash@gmail.com",
     description="Basic python manual image analysis tool using matplotlib",
