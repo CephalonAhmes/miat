@@ -18,41 +18,48 @@ def _set_button_active(button,active):
 	button.ax.axis({True:'on',False:'off'}[active])
 	button.set_active(active)
 
+
 class _draggable_lines:
 	def __init__(self,axes,position,color,orientation,linestyle):
 		self.orientation=orientation
 		self.axes=axes
 		self.canvas=axes[0].figure.canvas
 		self.position=position
-		self.lines=[Lines.Line2D(*{0:[[position,position],list(ax.get_ylim())],1:[list(ax.get_xlim()),[position,position]]}[orientation],picker=True,pickradius=4,c=color,linestyle=linestyle) for ax in self.axes]
+		if orientation=='vertical':
+			self.lines=[Lines.Line2D([position,position],list(ax.get_ylim()),picker=True,pickradius=4,c=color,linestyle=linestyle) for ax in self.axes]
+		if orientation=='horizontal':
+			self.lines=[Lines.Line2D(list(ax.get_xlim()),[position,position],picker=True,pickradius=4,c=color,linestyle=linestyle) for ax in self.axes]
+			
 		self.line_artists=[self.axes[i].add_line(self.lines[i]) for i in range(len(self.axes))]
-		self.sid = self.canvas.mpl_connect('pick_event', self.clickonline)
 		self.canvas.draw_idle()
 
 
-	def clickonline(self, event):
-		if event.artist in self.lines:
-			[line_artist.set_visible(False) for line_artist in self.line_artists]
-			self.canvas.draw()
-			self.backgrounds=[self.canvas.copy_from_bbox(ax.bbox) for ax in self.axes]
-			[line_artist.set_visible(True) for line_artist in self.line_artists]
-			self.canvas.draw()
-			self.follower = self.canvas.mpl_connect("motion_notify_event", self.followmouse)
-			self.releaser = self.canvas.mpl_connect("button_press_event", self.releaseonclick)
+	def start_event(self, event):
+		[line_artist.set_visible(False) for line_artist in self.line_artists]
+		self.canvas.draw()
+		self.backgrounds=[self.canvas.copy_from_bbox(ax.bbox) for ax in self.axes]
+		[line_artist.set_visible(True) for line_artist in self.line_artists]
+		self.canvas.draw()
+		self.follower = self.canvas.mpl_connect("motion_notify_event", self.followmouse)
+		self.releaser = self.canvas.mpl_connect("button_press_event", self.releaseonclick)
 
 	def followmouse(self, event):
 		if event.xdata and event.ydata:
 			[self.canvas.restore_region(background) for background in self.backgrounds]
-			if self.orientation==1:
-				[line.set_ydata([event.ydata, event.ydata]) for line in self.lines]
-			if self.orientation==0:
+			if self.orientation=='vertical':
 				[line.set_xdata([event.xdata, event.xdata]) for line in self.lines]
+			if self.orientation=='horizontal':
+				[line.set_ydata([event.ydata, event.ydata]) for line in self.lines]
 			[self.axes[i].draw_artist(self.lines[i]) for i in range(len(self.axes))]
 			[self.canvas.blit(ax.bbox) for ax in self.axes]
 
 	def releaseonclick(self, event):
 		[self.canvas.blit(ax.bbox) for ax in self.axes]
-		self.position = {0:self.lines[0].get_xdata()[0],1:self.lines[0].get_ydata()[0]}[self.orientation]
+		if self.orientation=='vertical':
+			self.position=self.lines[0].get_xdata()[0]
+		if self.orientation=='horizontal':
+			self.position=self.lines[0].get_ydata()[0]
+
 		self.canvas.mpl_disconnect(self.releaser)
 		self.canvas.mpl_disconnect(self.follower)
 
@@ -175,7 +182,6 @@ class toolbarbutton(ToolBase):
 	def trigger(self, *args, **kwargs):
 		if self._active:
 			self.func()
-
 
 
 
@@ -302,13 +308,11 @@ class circles_tool:
 		return circles_tool_obj.returnpositions()
 
 
-
-
 class lines_tool:
 	def __init__(self,canvas,marker_group_size,linestyle,axes,clear):
 		self.marker_group_size=marker_group_size
 		self.canvas=canvas
-		self.markers=[[],[]]
+		self.v_markers,self.h_markers=[],[]
 		self.linestyle=linestyle
 		self.clear=clear
 		
@@ -319,33 +323,32 @@ class lines_tool:
 		
 		self.tm = self.canvas.manager.toolmanager
 		self.tb=self.canvas.manager.toolbar
-		markerindex_dic={'v':0,'h':1}
 
 
 		self.add_v_tool=self.tm.add_tool('add_v',
 					toolbarbutton,
 					image=str(Path(__file__).parent / "icons/" / 'add_{}_vbar_icon.png'.format(marker_group_size)),
-					func=(lambda: self.add_f(markerindex_dic['v'])),
+					func=(lambda: self.add_f(self.v_markers,'vertical')),
 					description='Add vertical lines',
 					)
 		
 		self.remove_v_tool=self.tm.add_tool('remove_v',
 					toolbarbutton,
 					image=str(Path(__file__).parent / "icons/" / 'remove_{}_vbar_icon.png'.format(marker_group_size)),
-					func=(lambda: self.delete_f(markerindex_dic['v'])),
+					func=(lambda: self.delete_f(self.v_markers,'vertical')),
 					description='Remove vertical lines',
 					)
 		self.add_h_tool=self.tm.add_tool('add_h',
 					toolbarbutton,
 					image=str(Path(__file__).parent / "icons/" / 'add_{}_hbar_icon.png'.format(marker_group_size)),
-					func=(lambda: self.add_f(markerindex_dic['h'])),
+					func=(lambda: self.add_f(self.h_markers,'horizontal')),
 					description='Add horizontal lines',
 					)
 		
 		self.remove_h_tool=self.tm.add_tool('remove_h',
 					toolbarbutton,
 					image=str(Path(__file__).parent / "icons/" / 'remove_{}_hbar_icon.png'.format(marker_group_size)),
-					func=(lambda: self.delete_f(markerindex_dic['h'])),
+					func=(lambda: self.delete_f(self.h_markers,'horizontal')),
 					description='Remove horizontal lines',
 					)
 		
@@ -354,53 +357,75 @@ class lines_tool:
 		self.tb.add_tool(self.add_h_tool, "foo",2)
 		self.tb.add_tool(self.remove_h_tool, "foo",3)
 		
-		self.buttons=[[self.add_v_tool,self.remove_v_tool],[self.add_h_tool,self.remove_h_tool]]
 		
-		self.check_marker_count(markerindex_dic['v'])
-		self.check_marker_count(markerindex_dic['h'])
+		self.check_marker_count()
+		self.sid = self.canvas.mpl_connect('button_press_event', self._line_selector)
+
 		
-	def add_f(self,orientation):
-		current_positions=np.array([[marker.position for marker in markergroup] for markergroup in self.markers[orientation]]).flatten()
-		possible_positions_x=np.linspace(*self.canvas.figure.get_axes()[0].get_xlim(),100)[10:-10]
-		possible_positions_y=np.linspace(*self.canvas.figure.get_axes()[0].get_ylim(),100)[10:-10]
-		possible_positions=[possible_positions_x,possible_positions_y][orientation]
-		selected_color=color_list[len(self.markers[orientation])]
-		selected_positions=[]
-		for i in range(self.marker_group_size):
-			while True:
-				random_position=np.random.choice(possible_positions)
-				if (random_position not in selected_positions) and (abs((random_position-current_positions)/(possible_positions[0]-possible_positions[-1]))>0.05).all():
-					selected_positions.append(random_position)
-					break
-		self.markers[orientation].append([_draggable_lines(self.axes,selected_positions[marker],selected_color,orientation,self.linestyle) for marker in range(self.marker_group_size)])
-		self.check_marker_count(orientation)
+	def _line_selector(self,event):
+		if event.button==1:
+			vertical_contains=np.array([marker.lines[0].contains(event)[0] for marker in self.v_markers])
+			horizontal_contains=np.array([marker.lines[0].contains(event)[0] for marker in self.h_markers])
+			if (vertical_contains==True).any():
+				self.v_markers[np.where(vertical_contains==True)[0][0]].start_event(event)
+			elif (horizontal_contains==True).any():
+				self.h_markers[np.where(horizontal_contains==True)[0][0]].start_event(event)
+
 		
-	def delete_f(self,orientation):
-		[marker.clear() for marker in self.markers[orientation][-1]]
-		del self.markers[orientation][-1:]
-		self.check_marker_count(orientation)
 		
-	def check_marker_count(self,orientation):
-		if len(self.markers[orientation])==len(color_list):
-			self.buttons[orientation][0].toggle(False)
-		elif len(self.markers[orientation])<len(color_list) and len(self.markers[orientation])>0:
-			self.buttons[orientation][0].toggle(True)
-			self.buttons[orientation][1].toggle(True)
-		elif len(self.markers[orientation])==0:
-			self.buttons[orientation][1].toggle(False)
+	def add_f(self,markers_list,orientation):
+		selected_color=color_list[int(len(markers_list)/self.marker_group_size)]
+		if orientation=='vertical':
+			ax_min,ax_max=self.canvas.figure.get_axes()[0].get_xlim()
+		if orientation=="horizontal":
+			ax_min,ax_max=self.canvas.figure.get_axes()[0].get_ylim()
+		starting_position=ax_min+(ax_max-ax_min)/15
+		markers_list.extend((_draggable_lines(self.axes,starting_position,selected_color,orientation,self.linestyle) for marker in range(self.marker_group_size)))
+		self.check_marker_count()
+		
+	def delete_f(self,markers_list,orientation):
+		[marker.clear() for marker in markers_list[-self.marker_group_size:]]
+		del markers_list[-self.marker_group_size:]
+		self.check_marker_count()
+		
+	def check_marker_count(self):
+		if len(self.v_markers)/self.marker_group_size==len(color_list):
+			self.add_v_tool.toggle(False)
+		elif len(self.v_markers)/self.marker_group_size<len(color_list) and len(self.v_markers)>0:
+			self.add_v_tool.toggle(True)
+			self.remove_v_tool.toggle(True)
+		elif len(self.v_markers)==0:
+			self.remove_v_tool.toggle(False)
+		
+		if len(self.h_markers)/self.marker_group_size==len(color_list):
+			self.add_h_tool.toggle(False)
+		elif len(self.h_markers)/self.marker_group_size<len(color_list) and len(self.h_markers)>0:
+			self.add_h_tool.toggle(True)
+			self.remove_h_tool.toggle(True)
+		elif len(self.h_markers)==0:
+			self.remove_h_tool.toggle(False)
+
 		self.canvas.draw_idle()
 
+	def sort_positions(self, unsorted):
+		sorted_array=np.empty([0,self.marker_group_size])
+		for i in range(0,len(unsorted), self.marker_group_size):
+			group=np.sort(unsorted[np.arange(i,i+self.marker_group_size)])
+			sorted_array=np.vstack((sorted_array,group))
+		return sorted_array
+		
 		
 	def returnpositions(self):
 		if self.clear:
-			unsorted=[[[marker.clear() for marker in markergroup] for markergroup in self.markers[orientation]] for orientation in range(len(self.markers))]
+			v_unsorted=np.array([marker.clear() for marker in self.v_markers])
+			h_unsorted=np.array([marker.clear() for marker in self.h_markers])
 			self.canvas.draw_idle()
 		if not self.clear:
-			unsorted=[[[marker.position for marker in markergroup] for markergroup in self.markers[orientation]] for orientation in range(len(self.markers))]
-		for i in range(len(unsorted)):
-			for ii in unsorted[i]:
-				ii.sort()
-		return unsorted
+			v_unsorted=np.array([marker.position for marker in self.v_markers])
+			h_unsorted=np.array([marker.position for marker in self.h_markers])
+
+		return self.sort_positions(v_unsorted), self.sort_positions(h_unsorted)
+
 	
 	def handle_close(self,event):
 		self.canvas.stop_event_loop()
