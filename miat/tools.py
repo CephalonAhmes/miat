@@ -308,7 +308,7 @@ class circles_tool:
 		return circles_tool_obj.returnpositions()
 
 
-class lines_tool:
+class _lines_tool_class:
 	def __init__(self,canvas,marker_group_size,linestyle,axes,clear):
 		self.marker_group_size=marker_group_size
 		self.canvas=canvas
@@ -360,7 +360,6 @@ class lines_tool:
 		
 		self.check_marker_count()
 		self.sid = self.canvas.mpl_connect('button_press_event', self._line_selector)
-
 		
 	def _line_selector(self,event):
 		if event.button==1:
@@ -370,8 +369,6 @@ class lines_tool:
 				self.v_markers[np.where(vertical_contains==True)[0][0]].start_event(event)
 			elif (horizontal_contains==True).any():
 				self.h_markers[np.where(horizontal_contains==True)[0][0]].start_event(event)
-
-		
 		
 	def add_f(self,markers_list,orientation):
 		selected_color=color_list[int(len(markers_list)/self.marker_group_size)]
@@ -426,59 +423,53 @@ class lines_tool:
 
 		return self.sort_positions(v_unsorted), self.sort_positions(h_unsorted)
 
-	
 	def handle_close(self,event):
 		self.canvas.stop_event_loop()
+
+def lines_tool(figure,markergroupsize:int=1,linestyle='solid',axes=None,clear=True):
+	"""
+	Adds four buttons on the figure that allow you to add lines on the plot. Click on the green ones to add a line group of corresponding orientation (vertical or horizontal).
+	The red ones remove the last group of said orientation. 
+
+
+	Parameters
+	----------
+	figure : plt.figure() object
 		
-	def main(figure,markergroupsize:int=1,linestyle='solid',axes=None,clear=True):
-		"""
-		Adds four buttons on the figure that allow you to add lines on the plot. Click on the green ones to add a line group of corresponding orientation (vertical or horizontal).
-		The red ones remove the last group of said orientation. 
+	markergroupsize : int
+		How many lines you want in a group. All the lines in said group will be the same color and their positions will be in the same
+		sub-list in the returned list. The default is 1.
+	linestyle : string, optional
+		The default is 'solid'. This is the usual linestyle argument, anything that lines2D will accept works.
+	axes : list of plt.add_subplot() objects, optional
+		Wich axes you want the lines to appear in. The default is 'All of them'.
+	clear : bool, optional
+		Remove all lines from the figure after it is closed. Useful if you still want to do something with it, like saving it, or use more tools.
+		If you want to have the markers stay, set to False. The default is True.
 
+	Raises
+	------
+	draggable_markersError
+		
 
-		Parameters
-		----------
-		figure : plt.figure() object
-			
-		markergroupsize : int
-			How many lines you want in a group. All the lines in said group will be the same color and their positions will be in the same
-			sub-list in the returned list. The default is 1.
-		linestyle : TYPE, optional
-			The default is 'solid'.
-		axes : list of plt.add_subplot() objects, optional
-			Wich axes you want the lines to appear in. The default is 'All of them'.
-		clear : bool, optional
-			Remove all lines from the figure after it is closed. Useful if you still want to do something with it, like saving it.
-			If you want to have the markers stay, set to False. The default is True.
+	Returns
+	-------
+	numpy array
+		arrays of the positions of all lines.The first one is vertical lines and the second horizontal. Each row of the array is one marker group. Each group sub-list is sorted
 
-		Raises
-		------
-		draggable_markersError
-			
+	"""
+	if markergroupsize>3 or markergroupsize<1:
+		raise draggable_markersError("Only supports marker groups sizes in the interval [1,3]")
+	if plt.get_backend()!='Qt5Agg':
+		raise draggable_markersError("Requires interactive backend. Switch to Qt5Agg by using plt.switch_backend('Qt5Agg'). This closes all current figures")
 
-		Returns
-		-------
-		list
-			list of the positions of all lines. Has the form [[[vertical group1],[vertical group2],[vertical group3]],[[horizontal group1],[horizontal group2],[horizontal group3]]]. Each group sub-list is sorted
-
-		"""
+	lines_tool_obj=_lines_tool_class(figure.canvas,markergroupsize,linestyle,axes,clear)
+	figure.canvas.mpl_connect('close_event', lines_tool_obj.handle_close)
+	plt.get_current_fig_manager().window.showMaximized()
+	plt.show()
 	
-		if markergroupsize>3 or markergroupsize<1:
-			raise draggable_markersError("Only supports marker groups sizes in the interval [1,3]")
-		if plt.get_backend()!='Qt5Agg':
-			raise draggable_markersError("Requires interactive backend. Switch to Qt5Agg by using plt.switch_backend('Qt5Agg'). This closes all current figures")
-	
-	
-		lines_tool_obj=lines_tool(figure.canvas,markergroupsize,linestyle,axes,clear)
-		
-		figure.canvas.mpl_connect('close_event', lines_tool_obj.handle_close)
-		plt.get_current_fig_manager().window.showMaximized()
-		plt.show()
-		
-		figure.canvas.start_event_loop()
-		
-		
-		return lines_tool_obj.returnpositions()
+	figure.canvas.start_event_loop()
+	return lines_tool_obj.returnpositions()
 
 class draggable_markersError(Exception):
 	pass
@@ -506,7 +497,7 @@ if __name__=='__main__':
 	ax1.set_xlabel('a')
 	ax1.set_ylabel('b')
 	
-	pos=lines_tool.main(fig,2)
+	pos=lines_tool(fig,2)
 
 	fig=plt.figure()
 	
