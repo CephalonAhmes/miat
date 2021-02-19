@@ -15,4 +15,4 @@ ax1 = fig.add_subplot(212)
 ax1.plot(x,y)
 ax1.set_ylim(-0.2,1.2)
 
-vlines,hlines=miat.lines_tool.main(fig,2,axes=[ax0])
+vlines,hlines=miat.lines_tool(fig,2,axes=[ax0])

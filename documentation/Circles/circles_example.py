@@ -10,5 +10,4 @@ ax0 = fig.add_subplot(111)
 ax0.imshow(img)
 ax0.set_title('circular diffusion pattern')
 
-
-radii=miat.circles_tool.main(ax0,2)
+radii=miat.circles_tool(ax0,2)
