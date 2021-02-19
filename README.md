@@ -14,7 +14,7 @@ What miat does is provide a few basic tools you might need, but with the added c
 Interested? The library is available on PyPI, so `pip install miat` will allow you to use it.
 
 
-From there, importing miat.tools will allow you to use miat. There aren't many for now, but it's stil a work-in-progress. The tools currently in place will allow you to add horizontal and vertcal bars to a figure or image, which is useful for measuring deltas, among others. The second tool allows you to add circular markers to a figure. One usecase I can think of would be to measure circular diffraction patterns. This library also works for imshow figures.
+From there, importing miat.tools will allow you to use miat. There aren't many of them for now, but it's stil a work-in-progress. The tools currently in place will allow you to add horizontal and vertcal bars to a figure or image, which is useful for measuring deltas, among other things. The second tool allows you to add circular markers to a figure. One usecase I can think of would be to measure circular diffraction patterns. This library also works for imshow figures.
 
 
 I have added some documentation [here](https://github.com/CephalonAhmes/miat/tree/main/documentation)
