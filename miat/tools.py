@@ -67,7 +67,7 @@ class _draggable_circles:
 		self.canvas=ax.figure.canvas
 		self.position=position
 		self.radius=radius
-		self.circle=Circle(position,radius,picker=self.circle_picker,color=color,linestyle=linestyle,fill=False)
+		self.circle=Circle(position,radius,color=color,linestyle=linestyle,fill=False)
 		
 		delta=min([self.ax.get_xlim()[1]-self.ax.get_xlim()[0],self.ax.get_ylim()[1]-self.ax.get_ylim()[0]])
 
@@ -80,18 +80,18 @@ class _draggable_circles:
 		self.canvas.draw_idle()
 
 	
-	def circle_picker(self,circle,mouseevent):
+	def circle_picker(self,mouseevent):
 		if (mouseevent.xdata is None) or (mouseevent.ydata is None):
 			return False, dict()
-		xdata,ydata = circle.get_center()
-		radius=circle.get_radius()
+		center_xdata,center_ydata = self.circle.get_center()
+		radius=self.circle.get_radius()
 		tolerance = 0.05
 		d = np.sqrt(
-			(xdata - mouseevent.xdata)**2 + (ydata - mouseevent.ydata)**2)
+			(center_xdata - mouseevent.xdata)**2 + (center_ydata - mouseevent.ydata)**2)
 
 		if d>=radius*(1-tolerance) and d<=radius*(1+tolerance):
-			pickx = xdata
-			picky = ydata
+			pickx = center_xdata
+			picky = center_ydata
 			props = dict(pickx=pickx, picky=picky)
 			return True,props
 		else:
@@ -205,7 +205,7 @@ class _circles_tool_class:
 		self.sid = self.canvas.mpl_connect('button_press_event', self._circle_selector)
 		
 	def _circle_selector(self,event):
-		contains=np.array([marker.circle.contains(event)[0] for marker in self.markers])
+		contains=np.array([marker.circle_picker(event)[0] for marker in self.markers])
 		if (contains==True).any():
 			self.markers[np.where(contains==True)[0][0]].start_event(event)
 	
@@ -311,8 +311,16 @@ class _lines_tool_class:
 		
 	def _line_selector(self,event):
 		if event.button==1:
-			vertical_contains=np.array([marker.lines[0].contains(event)[0] for marker in self.v_markers])
-			horizontal_contains=np.array([marker.lines[0].contains(event)[0] for marker in self.h_markers])
+			vertical_contains=np.empty(0)
+			for marker in self.v_markers:
+				any_has_been_clicked_on=np.array([line.contains(event)[0] for line in marker.lines]).any()
+				vertical_contains=np.append(vertical_contains, any_has_been_clicked_on)
+			
+			horizontal_contains=np.empty(0)
+			for marker in self.h_markers:
+				any_has_been_clicked_on=np.array([line.contains(event)[0] for line in marker.lines]).any()
+				horizontal_contains=np.append(horizontal_contains, any_has_been_clicked_on)
+
 			if (vertical_contains==True).any():
 				self.v_markers[np.where(vertical_contains==True)[0][0]].start_event(event)
 			elif (horizontal_contains==True).any():
@@ -492,7 +500,7 @@ if __name__=='__main__':
 	ax1.set_xlabel('a')
 	ax1.set_ylabel('b')
 	
-	pos=lines_tool(fig,2)
+	pos=lines_tool(fig,2,axes=[ax1])
 
 	fig=plt.figure()
 	
