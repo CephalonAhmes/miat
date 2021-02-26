@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 import matplotlib.lines as Lines
 from matplotlib.patches import Circle
 from pathlib import Path
-plt.rcParams['toolbar'] = 'toolmanager'
 from matplotlib.backend_tools import ToolBase
 import warnings
-warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+plt.rcParams['toolbar'] = 'toolmanager'
 
 #%%
 color_list=["r","c","orange","g","purple","saddlebrown","deeppink","lime","gray"]
@@ -70,6 +70,7 @@ class _draggable_circles:
 		self.circle=Circle(position,radius,color=color,linestyle=linestyle,fill=False)
 		
 		delta=min([self.ax.get_xlim()[1]-self.ax.get_xlim()[0],self.ax.get_ylim()[1]-self.ax.get_ylim()[0]])
+		self.currently_selected=False
 
 		
 		self.center_dot=Circle(position,delta/200,color=color)
@@ -125,6 +126,10 @@ class _draggable_circles:
 
 
 	def start_event(self, event):
+		if self.currently_selected:
+			return
+		
+		self.currently_selected=True
 		self.center_dot_artist.set_visible(False)
 		self.circle_artist.set_visible(False)
 		self.canvas.draw()
@@ -149,6 +154,7 @@ class _draggable_circles:
 		self.canvas.mpl_disconnect(self.follower)
 		self.canvas.mpl_disconnect(self.releaser)
 		self.canvas.draw_idle()
+		self.currently_selected=False
 
 	def clear(self):
 		self.circle.remove()
