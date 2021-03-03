@@ -8,7 +8,7 @@ Are you trying to measure some parameters on a figure using Python without using
 I know how excrutiatingly slow and error-prone this procedure can be, as I had to live through it multiple times over my academic career. That's also why I made this library based on matplotlib.
 
 
-What miat does is provide a few basic tools you might need, but with the added convenience of being available directly in your Python IDE in a blocking manner, meaning that it suspends the process and waits for you to complete your measurments before resuming. The advantage of this is that you can create a figure, measure some parameter, and use those values immediately after (you could save them, or append them to a list and do some additional calculations, for example).
+What miat does is provide a few basic tools you might need, but with the added convenience of being available directly in your Python IDE in a blocking manner, meaning that it suspends the process and waits for you to complete your measurements before resuming. The advantage of this is that you can create a figure, measure some parameter, and use those values immediately after (you could save them, or append them to a list and do some additional calculations, for example).
 
 
 Interested? The library is available on PyPI, so `pip install miat` will allow you to use it.
